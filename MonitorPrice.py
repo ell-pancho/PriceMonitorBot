@@ -15,12 +15,6 @@ class PriceMonitor_Bot():
         self.db.load()
         threading.Thread(target=self.monitoring, args=()).start()
 
-    def save_db(func):
-        def save(self, *args, **kwargs):
-            func(self, *args, **kwargs)
-            self.db.save()
-        return save
-
     def get_updates(self, offset=None, timeout=100):
         params = {'timeout': timeout, 'offset': offset}
         response = requests.get(self.api_url + 'getUpdates', data=params)
@@ -62,9 +56,9 @@ class PriceMonitor_Bot():
         if int(data['isk']) != monitorList[chat_id][name]['last_best_price']:
             self.db.set_last_best_price(chat_id, name, int(data['isk']))
             message = "[{1}]({2}) \n*Security status:* {0[sec]}, *System:* {0[system_name]}, *Price:* {0[isk]}, *Quantity:* {0[remaining]}, *Update time:* {0[update_time]}".format(data, name, url)                
-        if message: self.send_message(chat_id, message)
+        if message: threading.Thread(target=self.send_message, args=(chat_id, message))
         message = ""
-        print('check {}'.format(name))
+        print('Сheck {} for {}-chat-id'.format(name, chat_id))
 
     def monitoring(self):
         while True:
@@ -88,16 +82,13 @@ class PriceMonitor_Bot():
         message = self.db.register_name(chat_id, name, url)
         if message:
             self.send_message(chat_id, correct)
-            self.db.save()
         else:
             self.send_message(chat_id, incorrect)
 
-    @save_db
     def set_timestep(self, chat_id, value):
         for name in self.monitorList[chat_id].keys():
             self.db.set_time_step(chat_id, name, value)
 
-    @save_db
     def change_status(self, chat_id, status, name=None):
         if name: self.db.set_status(chat_id, name, status)
         else:
@@ -132,19 +123,19 @@ def main():
 
             #/settimestep
             if user_message.startswith("/settimestep"):
-                try:
+                if len(user_message.split()) == 2:
                     command, value = user_message.split()
                     bot.set_timestep(value)
-                except:
+                else:
                     bot.send_message(chat_id, "Wrong format. See /help.")
 
             #/monitor
             if user_message.startswith("/monitor"):
-                #try:
-                command, name, url = user_message.split()
-                bot.monitor(chat_id, name, url)
-                #except:
-                #    bot.send_message(chat_id, "Wrong format. See /help.")
+                if len(user_message.split()) == 3:
+                    command, name, url = user_message.split()
+                    bot.monitor(chat_id, name, url)
+                else:
+                    bot.send_message(chat_id, "Wrong format. See /help.")
 
             #/startmonitor or /stopmonitor
             if user_message.startswith("/startmonitor") or user_message.startswith("/stopmonitor"):
