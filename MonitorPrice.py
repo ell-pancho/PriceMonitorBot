@@ -12,6 +12,7 @@ class PriceMonitor_Bot():
         self.token          = token
         self.api_url        = "https://api.telegram.org/bot{}/".format(token)
         self.db             = db.Database()
+        self.delete_list    = list()
         self.db.load()
         threading.Thread(target=self.monitoring, args=()).start()
 
@@ -45,24 +46,25 @@ class PriceMonitor_Bot():
         response = requests.post(self.api_url + 'sendMessage', data=params)
         return response
 
-    def solo_check(self, chat_id, name, monitorList):
+    def process(self, chat_id, name, monitorList):
         message = ""
         url = monitorList[chat_id][name]['url']
         try:
             data = cPrice.get_price(url)
         except:
+            print("Something error in web-server...")
             return
         if data == None: return
         if int(data['isk']) != monitorList[chat_id][name]['last_best_price']:
+            self.db.set_last_check_time(chat_id, name, round(time.time()))
             self.db.set_last_best_price(chat_id, name, int(data['isk']))
-            message = "[{1}]({2}) \n*Security status:* {0[sec]}, *System:* {0[system_name]}, *Price:* {0[isk]}, *Quantity:* {0[remaining]}, *Update time:* {0[update_time]}".format(data, name, url)                
-        if message: threading.Thread(target=self.send_message, args=(chat_id, message))
-        message = ""
+            message = "[{1}]({2}) \n*Security status:* {0[sec]}, *System:* {0[system_name]}, *Price:* {0[isk]}, *Quantity:* {0[remaining]}, *Update time:* {0[update_time]}".format(data, name, url)          
+        if message: threading.Thread(target=self.send_message, args=(chat_id, message)).start()
         print('Сheck {} for {}-chat-id'.format(name, chat_id))
 
     def monitoring(self):
         while True:
-            monitorList = copy.deepcopy(self.db.monitorList)
+            monitorList = self.db.monitorList
             try:
                 for chat_id in monitorList.keys():
                     for name in monitorList[chat_id].keys():
@@ -70,33 +72,65 @@ class PriceMonitor_Bot():
                         current_time = round(time.time())
                         if abs(current_time-monitorList[chat_id][name]['last_check_time'])>int(monitorList[chat_id][name]['time_step']):
                             self.db.set_last_check_time(chat_id, name, current_time)
-                            t = threading.Thread(target=self.solo_check, args=(copy.deepcopy(chat_id), copy.deepcopy(name), copy.deepcopy(monitorList)))
+                            t = threading.Thread(target=self.process, args=(copy.deepcopy(chat_id), copy.deepcopy(name), copy.deepcopy(monitorList)))
                             t.start()
             except:
                 pass
+            for item in self.delete_list:
+                self.db.delete_name(item[0], item[1])
+                self.send_message(item[0], "*{}* successfully deleted!".format(item[1]))
+                self.delete_list.remove(item)
             time.sleep(1)
 
     def monitor(self, chat_id, name, url):
         incorrect = "*{}* already added for monitoring!".format(name)
         correct = "*{}* added for monitoring!".format(name)
-        message = self.db.register_name(chat_id, name, url)
-        if message:
-            self.send_message(chat_id, correct)
-        else:
-            self.send_message(chat_id, incorrect)
+        result = self.db.register_name(chat_id, name, url)
+        self.send_message(chat_id, correct if result else incorrect)
 
-    def set_timestep(self, chat_id, value):
-        for name in self.monitorList[chat_id].keys():
-            self.db.set_time_step(chat_id, name, value)
+    def check_name(self, chat_id, name):
+        names = self.db.name_list(chat_id)
+        return True if name in names else False
+
+    def check_names(self, chat_id):
+        names = self.db.name_list(chat_id)
+        return True if names else False
+
+    def list_monitor(self, chat_id):
+        if not self.check_names(chat_id):
+            message = "You monitor is empty!"
+            self.send_message(chat_id, message)
+            return
+        message = "*List monitoring:* {}".format(", ".join(self.db.name_list(chat_id)))
+        self.send_message(chat_id, message)
+
+    def delete(self, chat_id, name):
+        if not self.check_name(chat_id, name):
+            message = "*{}* not exists in monitor list!".format(name)
+            self.send_message(chat_id, message)
+            return
+        self.delete_list.append((chat_id, name))
+
+    def set_time_step(self, chat_id, value):
+        if not self.check_names(chat_id):
+            message = "You monitor is empty!"
+            self.send_message(chat_id, message)
+            return
+        for name in self.db.name_list(chat_id):
+            self.db.set_time_step(chat_id, name, int(value))
 
     def change_status(self, chat_id, status, name=None):
+        if not self.check_name(chat_id, name):
+            message = "*{}* not exists in monitor list!"
+            self.send_message(chat_id, message)
+            return
         if name: self.db.set_status(chat_id, name, status)
         else:
             for name in self.db.monitorList[chat_id].keys():
                 self.db.set_status(chat_id, name, status)
 
     def help(self, chat_id):
-        message = "Help for PriceMonitorBot:\n/monitor [name] [url]\n/stop [name]\n/settimestep [value] | default value 60 seconds"
+        message = "Help for PriceMonitorBot:\n/monitor [name] [url]\n/delete [name]\n/stopmonitor [name] or /stopmonitor\n/startmonitor [name] or /startmonitor\n/settimestep [value] | default value 60 seconds\n/listmonitor"
         self.send_message(chat_id, message, None)
 
 def main():
@@ -125,7 +159,7 @@ def main():
             if user_message.startswith("/settimestep"):
                 if len(user_message.split()) == 2:
                     command, value = user_message.split()
-                    bot.set_timestep(value)
+                    bot.set_time_step(chat_id, value)
                 else:
                     bot.send_message(chat_id, "Wrong format. See /help.")
 
@@ -134,6 +168,17 @@ def main():
                 if len(user_message.split()) == 3:
                     command, name, url = user_message.split()
                     bot.monitor(chat_id, name, url)
+                else:
+                    bot.send_message(chat_id, "Wrong format. See /help.")
+
+            #/listmonitor            
+            if user_message == "/listmonitor": bot.list_monitor(chat_id)
+
+            #/delete
+            if user_message.startswith("/delete"):
+                if len(user_message.split()) == 2:
+                    command, name = user_message.split()
+                    bot.delete(chat_id, name)
                 else:
                     bot.send_message(chat_id, "Wrong format. See /help.")
 

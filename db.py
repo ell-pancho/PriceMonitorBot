@@ -10,16 +10,20 @@ class Database():
     def chat_ids(self):
         return self.monitorList.keys()
 
+    def name_list(self, chat_id):
+        return self.monitorList[chat_id].keys()
+
     def register_chat_id(self, chat_id):
         if not chat_id in self.monitorList.keys():
             self.monitorList[chat_id] = dict()
 
     def save(func):
         def save_db(self, *args, **kwargs):
-            func(self, *args, **kwargs)
+            result = func(self, *args, **kwargs)
             with open(self.path, 'w') as output:
                 json.dump(self.monitorList, output, sort_keys=True, indent=2)
                 print("Database save successfully!")
+            return result
         return save_db
 
     def load(self):
@@ -48,7 +52,6 @@ class Database():
         }
         self.monitorList[chat_id][name] = params
         return True
-
     @save
     def set_last_best_price(self, chat_id, name, value):
         self.monitorList[chat_id][name]['last_best_price'] = value
@@ -64,3 +67,7 @@ class Database():
     @save
     def set_time_step(self, chat_id, name, value):
         self.monitorList[chat_id][name]['time_step'] = value
+
+    @save
+    def delete_name(self, chat_id, name):
+        self.monitorList[chat_id].pop(name)
