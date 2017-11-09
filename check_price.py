@@ -32,7 +32,7 @@ def parser_html(rawHTML):
         data[count] = info
     return data
 
-def get_price(url):
+def get_best_price(url):
     try:
         request = requests.get(url)
     except requests.exceptions.HTTPError as e:

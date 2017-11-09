@@ -50,7 +50,7 @@ class PriceMonitor_Bot():
         message = ""
         url = monitorList[chat_id][name]['url']
         try:
-            data = cPrice.get_price(url)
+            data = cPrice.get_best_price(url)
         except:
             print("Something error in web-server...")
             return
@@ -98,7 +98,7 @@ class PriceMonitor_Bot():
 
     def list_monitor(self, chat_id):
         if not self.check_names(chat_id):
-            message = "You monitor is empty!"
+            message = "You monitoring list is empty!"
             self.send_message(chat_id, message)
             return
         message = "*List monitoring:* {}".format(", ".join(self.db.name_list(chat_id)))
@@ -106,28 +106,31 @@ class PriceMonitor_Bot():
 
     def delete(self, chat_id, name):
         if not self.check_name(chat_id, name):
-            message = "*{}* not exists in monitor list!".format(name)
+            message = "*{}* not exists in monitoring list!".format(name)
             self.send_message(chat_id, message)
             return
         self.delete_list.append((chat_id, name))
 
     def set_time_step(self, chat_id, value):
         if not self.check_names(chat_id):
-            message = "You monitor is empty!"
+            message = "You monitoring list is empty!"
             self.send_message(chat_id, message)
             return
         for name in self.db.name_list(chat_id):
             self.db.set_time_step(chat_id, name, int(value))
 
     def change_status(self, chat_id, status, name=None):
-        if not self.check_name(chat_id, name):
-            message = "*{}* not exists in monitor list!"
-            self.send_message(chat_id, message)
-            return
-        if name: self.db.set_status(chat_id, name, status)
+        if name:
+            if not self.check_name(chat_id, name):
+                message = "*{}* not exists in monitoring list!".format(name)
+                self.send_message(chat_id, message)
+                return
+            self.db.set_status(chat_id, name, status)
         else:
             for name in self.db.monitorList[chat_id].keys():
                 self.db.set_status(chat_id, name, status)
+        if status: self.send_message(chat_id, "Started monitoring for {}!".format('all yours activities' if name else name))
+        else: self.send_message(chat_id, "Stopped monitoring for {}!".format('all yours activities' if name else name))
 
     def help(self, chat_id):
         message = "Help for PriceMonitorBot:\n/monitor [name] [url]\n/delete [name]\n/stopmonitor [name] or /stopmonitor\n/startmonitor [name] or /startmonitor\n/settimestep [value] | default value 60 seconds\n/listmonitor"
