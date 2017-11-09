@@ -22,7 +22,6 @@ class Database():
             result = func(self, *args, **kwargs)
             with open(self.path, 'w') as output:
                 json.dump(self.monitorList, output, sort_keys=True, indent=2)
-                print("Database save successfully!")
             return result
         return save_db
 
@@ -37,7 +36,6 @@ class Database():
                 for j,k in data[i].items():
                     new_data[int(i)][str(j)] = k 
             self.monitorList = new_data
-            print("Database load successfully!")
 
     @save
     def register_name(self, chat_id, name, url):
