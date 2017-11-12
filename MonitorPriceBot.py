@@ -77,7 +77,7 @@ class PriceMonitor_Bot():
         if int(data['isk']) != monitorList[chat_id][name]['last_best_price']:
             self.db.set_last_check_time(chat_id, name, round(time.time()))
             self.db.set_last_best_price(chat_id, name, int(data['isk']))
-            message = "[{1}]({2}) \n*{0[sec]}*: {0[system_name]}, Price: {0[isk]}, Quantity: {0[remaining]}, _{0[update_time]}_".format(data, name, url)
+            message = "[{1}]({2}) \n{0[system_name]} {0[sec]}, Price: {0[isk]}, Quantity: {0[remaining]}, _{0[update_time]}_".format(data, name, url)
         if message: threading.Thread(target=self.send_message, args=(chat_id, message)).start()
         print('Сheck {} for {}-chat_id'.format(name, chat_id))
 
