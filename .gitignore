@@ -2,3 +2,4 @@ __pycache__
 token.json
 db.json
 ellpanchobot/
+last_update.json

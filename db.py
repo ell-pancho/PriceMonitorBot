@@ -17,13 +17,9 @@ class Database():
         if not chat_id in self.monitorList.keys():
             self.monitorList[chat_id] = dict()
 
-    def save(func):
-        def save_db(self, *args, **kwargs):
-            result = func(self, *args, **kwargs)
-            with open(self.path, 'w') as output:
-                json.dump(self.monitorList, output, sort_keys=True, indent=2)
-            return result
-        return save_db
+    def save(self):
+        with open(self.path, 'w') as output:
+            json.dump(self.monitorList, output, sort_keys=True, indent=2)
 
     def load(self):
         if not os.path.exists(self.path):
@@ -37,7 +33,6 @@ class Database():
                     new_data[int(i)][str(j)] = k 
             self.monitorList = new_data
 
-    @save
     def register_name(self, chat_id, name, url):
         if name in self.monitorList[chat_id].keys():
             return False
@@ -50,22 +45,18 @@ class Database():
         }
         self.monitorList[chat_id][name] = params
         return True
-    @save
+
     def set_last_best_price(self, chat_id, name, value):
         self.monitorList[chat_id][name]['last_best_price'] = value
 
-    @save
     def set_last_check_time(self, chat_id, name, value):
         self.monitorList[chat_id][name]['last_check_time'] = value
 
-    @save
     def set_status(self, chat_id, name, value):
         self.monitorList[chat_id][name]['status'] = value
 
-    @save
     def set_time_step(self, chat_id, name, value):
         self.monitorList[chat_id][name]['time_step'] = value
 
-    @save
     def delete_name(self, chat_id, name):
         self.monitorList[chat_id].pop(name)

@@ -6,15 +6,24 @@ import db
 import copy
 import json, os
 
+HELP = """Help for PriceMonitorBot:
+/monitor [name] [url]
+/delete [name]
+/stopmonitor [name] or /stopmonitor
+/startmonitor [name] or /startmonitor
+/settimestep [value] | default value 60 seconds
+/listmonitor"""
+
 class PriceMonitor_Bot():
 
     def __init__(self, token):
-        self.token          = token
-        self.api_url        = "https://api.telegram.org/bot{}/".format(token)
+        self._token         = token
+        self._api_url       = "https://api.telegram.org/bot{}/".format(token)
         self.db             = db.Database()
         self.delete_list    = list()
         self.db.load()
         threading.Thread(target=self.monitoring, args=()).start()
+        threading.Thread(target=self.save_db, args=()).start()
 
     def get_updates(self, offset=None, timeout=100):
         params = {'timeout': timeout, 'offset': offset}
@@ -46,19 +55,29 @@ class PriceMonitor_Bot():
         response = requests.post(self.api_url + 'sendMessage', data=params)
         return response
 
+    def save_db(self):
+        last_check_time = round(time.time())
+        delta = 60
+        while True:
+            current_time = round(time.time())
+            if abs(current_time-last_check_time)>delta:
+                last_check_time = current_time
+                self.db.save()
+            time.sleep(1)
+
     def process(self, chat_id, name, monitorList):
         message = ""
         url = monitorList[chat_id][name]['url']
         try:
             data = cPrice.get_best_price(url)
         except:
-            print("Something error in web-server...")
+            print("Some error in web-server...")
             return
         if data == None: return
         if int(data['isk']) != monitorList[chat_id][name]['last_best_price']:
             self.db.set_last_check_time(chat_id, name, round(time.time()))
             self.db.set_last_best_price(chat_id, name, int(data['isk']))
-            message = "[{1}]({2}) \n*Security status:* {0[sec]}, *System:* {0[system_name]}, *Price:* {0[isk]}, *Quantity:* {0[remaining]}, *Update time:* {0[update_time]}".format(data, name, url)          
+            message = "[{1}]({2}) \n*{0[sec]}*: {0[system_name]}, Price: {0[isk]}, Quantity: {0[remaining]}, _{0[update_time]}_".format(data, name, url)
         if message: threading.Thread(target=self.send_message, args=(chat_id, message)).start()
         print('Сheck {} for {}-chat_id'.format(name, chat_id))
 
@@ -76,6 +95,7 @@ class PriceMonitor_Bot():
                             t.start()
             except:
                 pass
+                
             for item in self.delete_list:
                 self.db.delete_name(item[0], item[1])
                 self.send_message(item[0], "*{}* successfully deleted!".format(item[1]))
@@ -133,5 +153,8 @@ class PriceMonitor_Bot():
         else: self.send_message(chat_id, "Stopped monitoring for {}!".format('all yours activities' if name else name))
 
     def help(self, chat_id):
-        message = "Help for PriceMonitorBot:\n/monitor [name] [url]\n/delete [name]\n/stopmonitor [name] or /stopmonitor\n/startmonitor [name] or /startmonitor\n/settimestep [value] | default value 60 seconds\n/listmonitor"
-        self.send_message(chat_id, message, None)
+        self.send_message(chat_id, HELP, None)
+
+    @property
+    def api_url(self):
+        return self._api_url
