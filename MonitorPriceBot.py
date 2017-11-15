@@ -74,10 +74,13 @@ class PriceMonitor_Bot():
             print("Some error in web-server...")
             return
         if data == None: return
-        if int(data['isk']) != monitorList[chat_id][name]['last_best_price']:
+        instance = monitorList[chat_id][name]
+        condition = data['isk'] == instance['last_best_price'] and data['quantity'] != instance['last_best_quantity']
+        if data['isk'] != instance['last_best_price'] or condition:
             self.db.set_last_check_time(chat_id, name, round(time.time()))
             self.db.set_last_best_price(chat_id, name, int(data['isk']))
-            message = "[{1}]({2}) \n{0[system_name]} {0[sec]}, Price: {0[isk]}, Quantity: {0[remaining]}, _{0[update_time]}_".format(data, name, url)
+            self.db.set_last_best_quantity(chat_id, name, int(data['quantity']))
+            message = "[{1}]({2}) \n{0[system_name]} {0[sec]}, Price: {0[isk]}, Quantity: {0[quantity]}, _{0[update_time]}_".format(data, name, url)
         if message: threading.Thread(target=self.send_message, args=(chat_id, message)).start()
         print('Сheck {} for {}-chat_id'.format(name, chat_id))
 
@@ -87,9 +90,10 @@ class PriceMonitor_Bot():
             try:
                 for chat_id in monitorList.keys():
                     for name in monitorList[chat_id].keys():
-                        if not monitorList[chat_id][name]['status']: continue
+                        instance = monitorList[chat_id][name]
+                        if not instance['status']: continue
                         current_time = round(time.time())
-                        if abs(current_time-monitorList[chat_id][name]['last_check_time'])>int(monitorList[chat_id][name]['time_step']):
+                        if abs(current_time-instance['last_check_time']) > int(instance['time_step']):
                             self.db.set_last_check_time(chat_id, name, current_time)
                             t = threading.Thread(target=self.process, args=(copy.deepcopy(chat_id), copy.deepcopy(name), copy.deepcopy(monitorList)))
                             t.start()

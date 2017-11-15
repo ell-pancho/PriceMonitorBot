@@ -3,7 +3,6 @@ import json, os
 import MonitorPriceBot as mPB
 
 TOKEN_PATH = r"./token.json"
-LAST_CHECK_UPDATE_PATH = r"./last_update.json"
 
 def get_token():
     token_path = os.path.abspath(TOKEN_PATH)
@@ -35,11 +34,7 @@ def main():
         return
     bot = mPB.PriceMonitor_Bot(token)
     
-    last_check_update = get_last_check_update()
-    if last_check_update:
-        update_id = last_check_update + 1
-    else:
-        update_id = bot.last_update()['update_id']
+    update_id = bot.last_update()['update_id']
 
     while True:
         last_update = bot.last_update()

@@ -41,7 +41,8 @@ class Database():
             'status': True,
             'last_best_price': 0,
             'last_check_time': 0,
-            'time_step': 60
+            'time_step': 60,
+            'last_best_quantity': 0,
         }
         self.monitorList[chat_id][name] = params
         return True
@@ -51,6 +52,9 @@ class Database():
 
     def set_last_check_time(self, chat_id, name, value):
         self.monitorList[chat_id][name]['last_check_time'] = value
+
+    def set_last_best_quantity(self, chat_id, name, value):
+        self.monitorList[chat_id][name]['last_best_quantity'] = value
 
     def set_status(self, chat_id, name, value):
         self.monitorList[chat_id][name]['status'] = value

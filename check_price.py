@@ -9,7 +9,7 @@ def parser_html(rawHTML):
     list_lxml       = list_lxml[0]
     sec             = list_lxml.xpath('//td/span[@class="sec_high" or @class="sec_null" or @class="sec_low"]/text()')
     name            = tree.xpath('//tr[@class = "r1"]/td/text()')
-    remaining       = list_lxml.xpath('//td[@class="qty"]/text()')
+    quantity        = list_lxml.xpath('//td[@class="qty"]/text()')
     isk             = [int(i.replace('\n','').replace(' ','').replace(',','')) for i in list_lxml.xpath('//td[@class = "isk"]/text()') if i.replace('\n','').replace(' ','')]
     update_time     = list_lxml.xpath('//td[@class="update_time"]/span/text()')
     names           = list()
@@ -24,10 +24,10 @@ def parser_html(rawHTML):
 
     for count, item in enumerate(isk):
         info = dict()
-        info['isk'] = item
+        info['isk'] = int(item)
         info['system_name'] = names[count]
-        info['sec'] = sec[count]
-        info['remaining'] = remaining[count]
+        info['sec'] = float(sec[count])
+        info['quantity'] = int(quantity[count])
         info['update_time'] = update_time[count]
         data[count] = info
     return data
