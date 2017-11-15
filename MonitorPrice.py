@@ -12,20 +12,6 @@ def get_token():
         token = data["token"]
     return token
 
-def get_last_check_update():
-    path = os.path.abspath(LAST_CHECK_UPDATE_PATH)
-    if not os.path.exists(path): return False
-    with open(path, 'r') as output:
-        data = json.loads(output.read())
-        last_check_update = data["last_check_update"]
-    return last_check_update
-
-def save_last_check_update(value):
-    data = dict()
-    with open(LAST_CHECK_UPDATE_PATH, 'w') as output:
-        data["last_check_update"] = value
-        json.dump(data, output, sort_keys=True, indent=2)
-
 def main():
     
     token = get_token()
@@ -84,7 +70,6 @@ def main():
                 else:
                     bot.send_message(chat_id, "Wrong format. See /help.")
 
-            save_last_check_update(last_update['update_id'])
             update_id += 1
         time.sleep(1)
 

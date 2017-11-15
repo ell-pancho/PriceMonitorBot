@@ -22,6 +22,7 @@ class PriceMonitor_Bot():
         self.db             = db.Database()
         self.delete_list    = list()
         self.db.load()
+        self.db.reorganization_db()
         threading.Thread(target=self.monitoring, args=()).start()
         threading.Thread(target=self.save_db, args=()).start()
 

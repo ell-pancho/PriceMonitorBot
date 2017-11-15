@@ -47,6 +47,14 @@ class Database():
         self.monitorList[chat_id][name] = params
         return True
 
+    def reorganization_db(self):
+        for chat_ids in self.monitorList.keys():
+            for names in self.monitorList[chat_ids].keys():
+                if self.monitorList[chat_ids][names].get('last_best_quantity'): continue
+                self.monitorList[chat_ids][names]['last_best_quantity'] = 0
+        self.save()
+        print("Reorganization basedate complete!")
+
     def set_last_best_price(self, chat_id, name, value):
         self.monitorList[chat_id][name]['last_best_price'] = value
 
