@@ -5,13 +5,11 @@ from lxml import html
 def parser_html(rawHTML):
     data            = dict()
     tree            = html.fromstring(rawHTML)
-    list_lxml       = tree.xpath('//tr[@class = "r1"]')
-    list_lxml       = list_lxml[0]
-    sec             = list_lxml.xpath('//td/span[@class="sec_high" or @class="sec_null" or @class="sec_low"]/text()')
+    sec             = tree.xpath('//tr[@class = "r1"]/td/span[@class="sec_high" or @class="sec_null" or @class="sec_low"]/text()')
     name            = tree.xpath('//tr[@class = "r1"]/td/text()')
-    quantity        = list_lxml.xpath('//td[@class="qty"]/text()')
-    isk             = [int(i.replace('\n','').replace(' ','').replace(',','')) for i in list_lxml.xpath('//td[@class = "isk"]/text()') if i.replace('\n','').replace(' ','')]
-    update_time     = list_lxml.xpath('//td[@class="update_time"]/span/text()')
+    quantity        = tree.xpath('//tr[@class = "r1"]/td[@class="qty"]/text()')
+    isk             = [int(i.replace('\n','').replace(' ','').replace(',','')) for i in tree.xpath('//tr[@class = "r1"]/td[@class = "isk"]/text()') if i.replace('\n','').replace(' ','')]
+    update_time     = tree.xpath('//tr[@class = "r1"]/td[@class="update_time"]/span/text()')
     names           = list()
 
     for item in name:

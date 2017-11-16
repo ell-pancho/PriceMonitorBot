@@ -13,18 +13,9 @@ HELP = """Help for PriceMonitorBot:
 /startmonitor [name] or /startmonitor
 /settimestep [value] | default value 60 seconds
 /listmonitor"""
+DELTA_PRICE = 100
 
-class PriceMonitor_Bot():
-
-    def __init__(self, token):
-        self._token         = token
-        self._api_url       = "https://api.telegram.org/bot{}/".format(token)
-        self.db             = db.Database()
-        self.delete_list    = list()
-        self.db.load()
-        self.db.reorganization_db()
-        threading.Thread(target=self.monitoring, args=()).start()
-        threading.Thread(target=self.save_db, args=()).start()
+class Bot():
 
     def get_updates(self, offset=None, timeout=100):
         params = {'timeout': timeout, 'offset': offset}
@@ -56,6 +47,19 @@ class PriceMonitor_Bot():
         response = requests.post(self.api_url + 'sendMessage', data=params)
         return response
 
+
+class PriceMonitor_Bot(Bot):
+
+    def __init__(self, token):
+        self._token         = token
+        self._api_url       = "https://api.telegram.org/bot{}/".format(token)
+        self.db             = db.Database()
+        self.delete_list    = list()
+        self.db.load()
+        self.db.reorganization_db()
+        threading.Thread(target=self.monitoring, args=()).start()
+        threading.Thread(target=self.save_db, args=()).start()
+
     def save_db(self):
         last_check_time = round(time.time())
         delta = 60
@@ -76,11 +80,12 @@ class PriceMonitor_Bot():
             return
         if data == None: return
         instance = monitorList[chat_id][name]
-        condition = data['isk'] == instance['last_best_price'] and data['quantity'] != instance['last_best_quantity']
-        if data['isk'] != instance['last_best_price'] or condition:
+        condition = data['isk'] == instance['last_best_price'] and data['quantity'] < instance['last_best_quantity']//2
+        if abs(data['isk'] - instance['last_best_price']) > DELTA_PRICE or condition:
             self.db.set_last_check_time(chat_id, name, round(time.time()))
             self.db.set_last_best_price(chat_id, name, int(data['isk']))
             self.db.set_last_best_quantity(chat_id, name, int(data['quantity']))
+            self.db.set_last_system_name(chat_id, name, data['system_name'])
             message = "[{1}]({2}) \n{0[system_name]} {0[sec]}, Price: {0[isk]}, Quantity: {0[quantity]}, _{0[update_time]}_".format(data, name, url)
         if message: threading.Thread(target=self.send_message, args=(chat_id, message)).start()
         print('Сheck {} for {}-chat_id'.format(name, chat_id))

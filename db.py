@@ -43,6 +43,7 @@ class Database():
             'last_check_time': 0,
             'time_step': 60,
             'last_best_quantity': 0,
+            'last_system_name': "",
         }
         self.monitorList[chat_id][name] = params
         return True
@@ -50,10 +51,10 @@ class Database():
     def reorganization_db(self):
         for chat_ids in self.monitorList.keys():
             for names in self.monitorList[chat_ids].keys():
-                if self.monitorList[chat_ids][names].get('last_best_quantity'): continue
-                self.monitorList[chat_ids][names]['last_best_quantity'] = 0
+                if not self.monitorList[chat_ids][names].get('last_best_quantity'): self.monitorList[chat_ids][names]['last_best_quantity'] = 0
+                if not self.monitorList[chat_ids][names].get('last_system_name'): self.monitorList[chat_ids][names]['last_system_name'] = ""
         self.save()
-        print("Reorganization basedate complete!")
+        print("Reorganization database complete!")
 
     def set_last_best_price(self, chat_id, name, value):
         self.monitorList[chat_id][name]['last_best_price'] = value
@@ -63,6 +64,9 @@ class Database():
 
     def set_last_best_quantity(self, chat_id, name, value):
         self.monitorList[chat_id][name]['last_best_quantity'] = value
+
+    def set_last_system_name(self, chat_id, name, value):
+        self.monitorList[chat_id][name]['last_system_name'] = value
 
     def set_status(self, chat_id, name, value):
         self.monitorList[chat_id][name]['status'] = value
